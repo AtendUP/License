@@ -44,9 +44,12 @@ def index():
         "version": "1.0.0",
         "status": "online",
         "endpoints": {
-            "validate": "/api/licenca?key=XXX&uuid=XXX&disk=XXX",
-            "info": "/api/licenca/info?key=XXX",
-            "health": "/health"
+            "validate": "/api/licenca?key=XXX&uuid=XXX&disk=XXX (GET)",
+            "add": "/api/licenca/add (POST)",
+            "info": "/api/licenca/info?key=XXX (GET)",
+            "deactivate": "/api/licenca/deactivate (POST)",
+            "health": "/health (GET)",
+            "setup": "/setup (GET)"
         }
     })
 
@@ -252,6 +255,89 @@ def license_info():
     except Exception as e:
         return jsonify({
             "found": False,
+            "message": f"Erro interno: {str(e)}"
+        }), 500
+        
+    finally:
+        cur.close()
+        conn.close()
+
+
+@app.route('/api/licenca/add', methods=['POST'])
+def add_license():
+    """
+    Endpoint para adicionar nova licença
+    
+    JSON esperado:
+    {
+        "license_key": "NOVA-CHAVE-AQUI",
+        "owner": "Nome do Cliente",
+        "email": "email@cliente.com",
+        "expires_on": "2026-12-31",  (opcional)
+        "max_activations": 1,         (opcional, padrão: 1)
+        "is_active": true             (opcional, padrão: true)
+    }
+    """
+    data = request.get_json()
+    
+    license_key = data.get('license_key', '').strip()
+    owner = data.get('owner', '').strip()
+    email = data.get('email', '').strip()
+    expires_on = data.get('expires_on')
+    max_activations = data.get('max_activations', 1)
+    is_active = data.get('is_active', True)
+    
+    if not license_key or not owner or not email:
+        return jsonify({
+            "success": False,
+            "message": "Dados obrigatórios faltando (license_key, owner, email)"
+        }), 400
+    
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({
+            "success": False,
+            "message": "Erro ao conectar no banco de dados"
+        }), 500
+    
+    try:
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        
+        cur.execute("""
+            INSERT INTO licenses (license_key, owner, email, expires_on, max_activations, is_active)
+            VALUES (%s, %s, %s, %s, %s, %s)
+            RETURNING id, license_key, owner, email, expires_on, max_activations, is_active, created_at
+        """, (license_key, owner, email, expires_on, max_activations, is_active))
+        
+        new_license = cur.fetchone()
+        conn.commit()
+        
+        return jsonify({
+            "success": True,
+            "message": "Licença criada com sucesso!",
+            "license": {
+                "id": new_license['id'],
+                "license_key": new_license['license_key'],
+                "owner": new_license['owner'],
+                "email": new_license['email'],
+                "expires_on": str(new_license['expires_on']) if new_license['expires_on'] else None,
+                "max_activations": new_license['max_activations'],
+                "is_active": new_license['is_active'],
+                "created_at": str(new_license['created_at'])
+            }
+        }), 201
+        
+    except psycopg2.IntegrityError:
+        conn.rollback()
+        return jsonify({
+            "success": False,
+            "message": "Chave de licença já existe"
+        }), 409
+        
+    except Exception as e:
+        conn.rollback()
+        return jsonify({
+            "success": False,
             "message": f"Erro interno: {str(e)}"
         }), 500
         
