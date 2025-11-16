@@ -420,10 +420,36 @@ https://www.uuidgenerator.net/
 License/
 ├── api/
 │   └── index.py          # Código principal da API
+├── .env.example         # Exemplo de variáveis de ambiente
+├── .gitignore           # Arquivos ignorados pelo Git
 ├── requirements.txt      # Dependências Python
 ├── vercel.json          # Configuração Vercel
 └── README.md            # Este arquivo
 ```
+
+### Configuração Local (Opcional)
+
+Para desenvolvimento local:
+
+1. **Copie o arquivo de exemplo:**
+   ```bash
+   cp .env.example .env
+   ```
+
+2. **Preencha com suas credenciais:**
+   Edite `.env` com suas credenciais reais do Neon e sua API Key
+
+3. **Instale as dependências:**
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+4. **Execute localmente:**
+   ```bash
+   python api/index.py
+   ```
+
+⚠️ **Nunca faça commit do arquivo `.env` real!** O `.gitignore` já está configurado para protegê-lo.
 
 ---
 
