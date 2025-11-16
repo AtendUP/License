@@ -66,8 +66,18 @@ API RESTful para gerenciar licenças de software, permitindo:
 
 1. Clique no botão acima
 2. Conecte seu GitHub
-3. Configure a variável de ambiente:
+3. Configure as variáveis de ambiente:
    - `POSTGRES_URL`: Cole a connection string do Neon
+   - `API_KEY`: Crie um token secreto forte (ex: `sk_live_abc123xyz789def456`)
+
+**⚠️ IMPORTANTE**: Gere um token forte para `API_KEY`. Exemplo:
+```bash
+# No terminal (Linux/Mac)
+openssl rand -hex 32
+
+# Ou use um gerador online
+https://www.uuidgenerator.net/
+```
 
 ### 4. Inicializar banco de dados
 
@@ -161,8 +171,17 @@ GET /api/licenca?key=DEMO-1234-5678-ABCD&uuid=550e8400-e29b&disk=WD-12345
 
 ---
 
-### **POST** `/api/licenca/add`
+### **POST** `/api/licenca/add` 🔒
 Adicionar nova licença
+
+**⚠️ Requer autenticação via API Key**
+
+**Headers:**
+```
+X-API-Key: seu-token-secreto-aqui
+# OU
+Authorization: Bearer seu-token-secreto-aqui
+```
 
 **Body JSON:**
 ```json
@@ -227,8 +246,15 @@ GET /api/licenca/info?key=DEMO-1234-5678-ABCD
 
 ---
 
-### **POST** `/api/licenca/deactivate`
+### **POST** `/api/licenca/deactivate` 🔒
 Desativar licença de um hardware específico
+
+**⚠️ Requer autenticação via API Key**
+
+**Headers:**
+```
+X-API-Key: seu-token-secreto-aqui
+```
 
 **Body JSON:**
 ```json
@@ -249,6 +275,26 @@ Desativar licença de um hardware específico
 
 ---
 
+### **GET** `/api/token/verify` 🔒
+Verificar se o token de API é válido
+
+**⚠️ Requer autenticação via API Key**
+
+**Headers:**
+```
+X-API-Key: seu-token-secreto-aqui
+```
+
+**Resposta:**
+```json
+{
+  "valid": true,
+  "message": "Token válido"
+}
+```
+
+---
+
 ## 💡 Exemplos de Uso
 
 ### cURL
@@ -262,6 +308,7 @@ curl "https://seu-projeto.vercel.app/api/licenca?key=DEMO-1234-5678-ABCD&uuid=te
 ```bash
 curl -X POST https://seu-projeto.vercel.app/api/licenca/add \
   -H "Content-Type: application/json" \
+  -H "X-API-Key: seu-token-secreto-aqui" \
   -d '{
     "license_key": "NOVA-LICENCA-2025",
     "owner": "Cliente Novo",
@@ -274,6 +321,7 @@ curl -X POST https://seu-projeto.vercel.app/api/licenca/add \
 ```bash
 curl -X POST https://seu-projeto.vercel.app/api/licenca/deactivate \
   -H "Content-Type: application/json" \
+  -H "X-API-Key: seu-token-secreto-aqui" \
   -d '{
     "key": "DEMO-1234-5678-ABCD",
     "uuid": "test-uuid",
@@ -297,9 +345,10 @@ response = requests.get(
 )
 print(response.json())
 
-# Adicionar licença
+# Adicionar licença (COM AUTENTICAÇÃO)
 response = requests.post(
     "https://seu-projeto.vercel.app/api/licenca/add",
+    headers={"X-API-Key": "seu-token-secreto-aqui"},
     json={
         "license_key": "NOVA-LICENCA",
         "owner": "João Silva",
@@ -344,9 +393,24 @@ print(response.json())
 
 Configure na Vercel (Settings > Environment Variables):
 
-| Variável | Descrição | Exemplo |
-|----------|-----------|---------|
-| `POSTGRES_URL` | Connection string do PostgreSQL | `postgresql://user:pass@host/db?sslmode=require` |
+| Variável | Descrição | Exemplo | Obrigatório |
+|----------|-----------|---------|-------------|
+| `POSTGRES_URL` | Connection string do PostgreSQL | `postgresql://user:pass@host/db?sslmode=require` | ✅ Sim |
+| `API_KEY` | Token secreto para endpoints protegidos | `sk_live_abc123xyz789def456` | ✅ Sim |
+
+**Como gerar uma API Key forte:**
+```bash
+# Linux/Mac
+openssl rand -hex 32
+
+# Python
+python -c "import secrets; print(secrets.token_urlsafe(32))"
+
+# Online
+https://www.uuidgenerator.net/
+```
+
+⚠️ **Nunca compartilhe sua API Key publicamente!**
 
 ---
 
