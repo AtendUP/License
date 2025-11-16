@@ -8,8 +8,38 @@ from datetime import datetime
 import psycopg2
 from psycopg2.extras import RealDictCursor
 import os
+from functools import wraps
 
 app = Flask(__name__)
+
+# API Key para endpoints protegidos
+API_KEY = os.environ.get('API_KEY', 'seu-token-secreto-aqui')
+
+def require_api_key(f):
+    """Decorator para proteger endpoints com API Key"""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        # Verificar API Key no header
+        provided_key = request.headers.get('X-API-Key') or request.headers.get('Authorization')
+        
+        # Remover "Bearer " se presente
+        if provided_key and provided_key.startswith('Bearer '):
+            provided_key = provided_key[7:]
+        
+        if not provided_key:
+            return jsonify({
+                "success": False,
+                "message": "API Key não fornecida. Use header: X-API-Key ou Authorization"
+            }), 401
+        
+        if provided_key != API_KEY:
+            return jsonify({
+                "success": False,
+                "message": "API Key inválida"
+            }), 403
+        
+        return f(*args, **kwargs)
+    return decorated_function
 
 # Configuração do banco de dados (Vercel Postgres)
 def get_db_connection():
@@ -68,6 +98,16 @@ def health_check():
         "version": "1.0.0",
         "database": db_status,
         "timestamp": datetime.now().isoformat()
+    })
+
+
+@app.route('/api/token/verify', methods=['GET'])
+@require_api_key
+def verify_token():
+    """Endpoint para verificar se o token é válido"""
+    return jsonify({
+        "valid": True,
+        "message": "Token válido"
     })
 
 
@@ -264,6 +304,7 @@ def license_info():
 
 
 @app.route('/api/licenca/add', methods=['POST'])
+@require_api_key
 def add_license():
     """
     Endpoint para adicionar nova licença
@@ -347,6 +388,7 @@ def add_license():
 
 
 @app.route('/api/licenca/deactivate', methods=['POST'])
+@require_api_key
 def deactivate_license():
     """Endpoint para desativar licença de um hardware"""
     data = request.get_json()
